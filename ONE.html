@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management System</title>
+    <style>
+        /* Previous styles remain the same */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .gift-options {
+            display: flex;
+            gap: 20px;
+        }
+
+        .gift-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .gift-option input[type="checkbox"] {
+            width: auto;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgb(255, 255, 255);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f8f8;
+        }
+
+        .action-buttons button {
+            padding: 6px 12px;
+            margin-right: 5px;
+        }
+
+        .edit-btn {
+            background: #2196F3;
+        }
+
+        .delete-btn {
+            background: #f44336;
+        }
+
+        .gift-item {
+            display: inline-block;
+            margin: 2px;
+            padding: 2px 8px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ระบบจัดการสินค้า</h1>
+        
+        <div class="form-container">
+            <h2>เพิ่ม/เเก้ไข</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="name">ชื่อ:</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">คำอธิบาย:</label>
+                    <textarea id="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="price">ราคา:</label>
+                    <input type="number" id="price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="stock">สต้อก:</label>
+                    <input type="number" id="stock" required>
+                </div>
+                <div class="form-group">
+                    <label>ของเเถม:</label>
+                    <div class="gift-options">
+                        <div class="gift-option">
+                            <input type="checkbox" id="remote" name="gift">
+                            <label for="remote">รีโมท</label>
+                        </div>
+                        <div class="gift-option">
+                            <input type="checkbox" id="plug" name="gift">
+                            <label for="plug">ปลั๊ก</label>
+                        </div>
+                        <div class="gift-option">
+                            <input type="checkbox" id="mouse" name="gift">
+                            <label for="mouse">เม้า</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit">บันทึกสินค้า</button>
+                <button type="button" onclick="resetForm()">เคลีย</button>
+                <button><a href="homepage.html">กลับไปหน้าหลัก</a></button>
+            </form>
+        </div>
+        <div id="loading" class="loading" style="display: none;">โหลด...</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>รหัส</th>
+                    <th>ชื่อ</th>
+                    <th>คำอธิบาย</th>
+                    <th>ราคา</th>
+                    <th>สต็อก</th>
+                    <th>ของเเถม</th>
+                    <th>เเก้ไข/ลบ</th>
+                </tr>
+            </thead>
+            <tbody id="productTableBody">
+                <!-- Products will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = 'https://6799f858747b09cdcccd2eb1.mockapi.io/sigmaboi';
+        
+        function setLoading(loading) {
+            document.getElementById('loading').style.display = loading ? 'block' : 'none';
+        }
+
+        async function fetchProducts() {
+            try {
+                setLoading(true);
+                const response = await fetch(API_URL);
+                const products = await response.json();
+                renderProducts(products);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                alert('Failed to load products');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            
+            const productId = document.getElementById('productId').value;
+            const productData = {
+                name: document.getElementById('name').value,
+                description: document.getElementById('description').value,
+                price: parseFloat(document.getElementById('price').value),
+                stock: parseInt(document.getElementById('stock').value),
+                gift: {
+                    remote: document.getElementById('remote').checked,
+                    plug: document.getElementById('plug').checked,
+                    mouse: document.getElementById('mouse').checked
+                }
+            };
+
+            try {
+                setLoading(true);
+                if (productId) {
+                    await fetch(`${API_URL}/${productId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(productData)
+                    });
+                } else {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(productData)
+                    });
+                }
+                resetForm();
+                fetchProducts();
+            } catch (error) {
+                console.error('Error saving product:', error);
+                alert('เกิดข้อผิดพลาดในการบันทึก');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('จะลบหรือไม่')) {
+                try {
+                    setLoading(true);
+                    await fetch(`${API_URL}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    fetchProducts();
+                } catch (error) {
+                    console.error('Error deleting product:', error);
+                    alert('เกิดข้อผิดพลาดในการลบ');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
+
+        async function editProduct(id) {
+            try {
+                setLoading(true);
+                const response = await fetch(`${API_URL}/${id}`);
+                const product = await response.json();
+                
+                document.getElementById('รหัสสินค้า').value = product.id;
+                document.getElementById('ชื่ิอ').value = product.name;
+                document.getElementById('คำอธิบาย').value = product.description;
+                document.getElementById('ราคา').value = product.price;
+                document.getElementById('สต้อก').value = product.stock;
+                
+                // Set gift checkboxes
+                document.getElementById('รีโมท').checked = product.gift?.remote || false;
+                document.getElementById('ปลั๊ก').checked = product.gift?.plug || false;
+                document.getElementById('เม้าส์').checked = product.gift?.mouse || false;
+            } catch (error) {
+                console.error('Error fetching product details:', error);
+                alert('Failed to load product details');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function renderProducts(products) {
+            const tbody = document.getElementById('productTableBody');
+            tbody.innerHTML = '';
+
+            products.forEach(product => {
+                const gifts = [];
+                if (product.gift?.remote) gifts.push('Remote');
+                if (product.gift?.plug) gifts.push('Plug');
+                if (product.gift?.mouse) gifts.push('Mouse');
+                
+                const giftDisplay = gifts.length 
+                    ? gifts.map(g => `<span class="gift-item">${g}</span>`).join(' ')
+                    : 'None';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>${product.description}</td>
+                    <td>$${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.stock}</td>
+                    <td>${giftDisplay}</td>
+                    <td class="action-buttons">
+                        <button class="edit-btn" onclick="editProduct('${product.id}')">เเก้ไข</button>
+                        <button class="delete-btn" onclick="deleteProduct('${product.id}')">ลบ</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function resetForm() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+        }
+
+        document.getElementById('productForm').addEventListener('submit', saveProduct);
+
+        fetchProducts();
+    </script>
+</body>
+</html>
